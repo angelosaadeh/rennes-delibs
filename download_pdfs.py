@@ -15,6 +15,8 @@ DATASETS = [
     },
 ]
 
+# The Mégalis server presents a certificate with a hostname mismatch, so TLS
+# verification is disabled on purpose. Acceptable here since this is public data.
 ctx = ssl.create_default_context()
 ctx.check_hostname = False
 ctx.verify_mode = ssl.CERT_NONE
@@ -35,9 +37,14 @@ def download_dataset(json_path, output_dir):
             ok += 1
             continue
         try:
-            req = urllib.request.urlopen(r["delib_url"], context=ctx, timeout=15)
-            with open(dest, "wb") as f:
-                f.write(req.read())
+            with urllib.request.urlopen(r["delib_url"], context=ctx, timeout=15) as resp:
+                data = resp.read()
+            # Write to a temp file then rename, so an interrupted download never
+            # leaves a partial .pdf that would be wrongly skipped on the next run.
+            tmp = dest + ".tmp"
+            with open(tmp, "wb") as f:
+                f.write(data)
+            os.replace(tmp, dest)
             ok += 1
         except Exception as e:
             fail += 1

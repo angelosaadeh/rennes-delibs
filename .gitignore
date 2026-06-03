@@ -1,6 +1,9 @@
 data/pdfs-ville/
 data/pdfs-metropole/
 data/pdfs_sample/
+data/extracted-ville.json
+data/extracted-metropole.json
+data/chunks.json
 __pycache__/
 *.pyc
 .env
