@@ -1,4 +1,4 @@
-# Rennes LEO
+# Rennes
 
 Système permettant d'interroger les délibérations de la Ville de Rennes et de Rennes Métropole.
 
