@@ -1,0 +1,7 @@
+data/pdfs-ville/
+data/pdfs-metropole/
+data/pdfs_sample/
+__pycache__/
+*.pyc
+.env
+.DS_Store
