@@ -17,8 +17,8 @@ questions, inutile de re-télécharger ou ré-indexer quoi que ce soit.
   `llama-cpp-python` (sur Mac : `xcode-select --install`). L'option Groq n'en a
   pas besoin.
 
-> Pas besoin de Homebrew. Les utilisateurs non techniques n'ont rien à installer :
-> une version hébergée (lien web) est prévue.
+> Les utilisateurs non techniques n'ont rien à installer : une version hébergée
+> (lien web) est prévue.
 
 ---
 
