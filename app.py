@@ -6,11 +6,19 @@ Loads the embedding index and LLaMA once at startup, then answers each message b
 retrieving the relevant chunks (dynamic count) and streaming a grounded French
 answer, followed by the source deliberations.
 """
+import os
+import signal
+
 import gradio as gr
 
 from ask import build_messages, format_sources, load_backend, stream_answer
 from config import LLM_BACKEND
 from retrieve import Retriever
+
+# Exit immediately on Ctrl+C. The native ML libs (torch/Metal, llama.cpp) tend to
+# segfault during interpreter teardown, which pops a macOS "Python quit
+# unexpectedly" dialog. os._exit skips that cleanup so shutdown is clean.
+signal.signal(signal.SIGINT, lambda *_: os._exit(0))
 
 print(f"Chargement de l'index et du modèle (backend: {LLM_BACKEND})...")
 retriever = Retriever()

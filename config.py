@@ -45,3 +45,12 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 # Llama 3.3 70B is free on Groq and far stronger than the local 8B — worth using
 # since generation is hosted. Override with GROQ_MODEL (e.g. llama-3.1-8b-instant).
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+
+# --- Retrieval breadth -----------------------------------------------------
+# Dynamic-k ceiling. Groq's hosted 70B has a 128k context, so it can use many
+# more chunks than the local 8B (capped by LLAMA_N_CTX) — broader, more complete
+# answers. Override with RETRIEVAL_MAX_K.
+RETRIEVAL_MIN_K = int(os.environ.get("RETRIEVAL_MIN_K", "3"))
+RETRIEVAL_MAX_K = int(
+    os.environ.get("RETRIEVAL_MAX_K", "20" if LLM_BACKEND == "groq" else "8")
+)

@@ -11,7 +11,7 @@ import numpy as np
 import torch
 from sentence_transformers import SentenceTransformer
 
-from config import E5_MODEL_PATH
+from config import E5_MODEL_PATH, RETRIEVAL_MAX_K, RETRIEVAL_MIN_K
 
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 
@@ -28,8 +28,9 @@ META = "data/embeddings.meta.json"
 # A broad question whose relevance fades slowly keeps more chunks; a narrow one
 # with a sharp drop after the first few keeps fewer. e5 cosine scores sit in a
 # compressed band, so a relative gap adapts far better than an absolute cutoff.
-MIN_K = 3
-MAX_K = 8
+# The ceiling is backend-aware (config): higher for Groq's large context window.
+MIN_K = RETRIEVAL_MIN_K
+MAX_K = RETRIEVAL_MAX_K
 
 
 def _model_name(path):
