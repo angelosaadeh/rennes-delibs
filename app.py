@@ -47,6 +47,9 @@ demo = gr.ChatInterface(
         "Quelles subventions pour la culture et les festivals ?",
         "Qu'a décidé le conseil sur le Plan Climat Air Énergie ?",
     ],
+    # Don't pre-run the examples at startup — that would call Groq before any user
+    # interaction and make the whole app fail to launch if a call errors.
+    cache_examples=False,
 )
 
 if __name__ == "__main__":
