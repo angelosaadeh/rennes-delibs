@@ -10,6 +10,18 @@ questions, inutile de re-télécharger ou ré-indexer quoi que ce soit.
 
 ---
 
+## Prérequis
+
+- **Python 3.10+** (https://www.python.org/downloads/). `pip` est inclus avec Python.
+- **Option locale uniquement** : des outils de compilation sont nécessaires pour
+  `llama-cpp-python` (sur Mac : `xcode-select --install`). L'option Groq n'en a
+  pas besoin.
+
+> Pas besoin de Homebrew. Les utilisateurs non techniques n'ont rien à installer :
+> une version hébergée (lien web) est prévue.
+
+---
+
 ## Installation
 
 ```bash
@@ -35,7 +47,7 @@ puissant que le 8B local, et **aucun téléchargement de 6,6 Go**.
 
 1. Allez sur **https://console.groq.com** et créez un compte (bouton *Sign up* —
    vous pouvez utiliser votre compte Google ou GitHub, ou une adresse e-mail).
-2. Une fois connecté, dans le menu de gauche, cliquez sur **API Keys**.
+2. Une fois connecté, dans le menu en haut, cliquez sur **API Keys**.
 3. Cliquez sur **Create API Key**, donnez-lui un nom (par ex. `rennes-delibs`),
    puis validez.
 4. **Copiez la clé immédiatement** (elle commence par `gsk_...`). Elle ne s'affiche
@@ -47,7 +59,8 @@ puissant que le 8B local, et **aucun téléchargement de 6,6 Go**.
 
 #### La renseigner
 
-Dans `.env`, collez votre clé :
+Ouvrez `.env` — c'est un fichier *caché* (en terminal : `nano .env` ; sur Mac :
+`open -e .env`) — et renseignez :
 
 ```ini
 LLM_BACKEND=groq
