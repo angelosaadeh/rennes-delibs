@@ -1,0 +1,7 @@
+# Dependencies for the Hugging Face Space (Groq backend).
+# gradio is provided by the Space SDK; PyMuPDF/llama-cpp-python are not needed at
+# runtime here.
+sentence-transformers
+torch
+numpy
+groq
