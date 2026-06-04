@@ -58,7 +58,12 @@ def load_existing(current_ids):
         return None, 0
     with open(META) as f:
         meta = json.load(f)
-    if meta.get("model") != MODEL_NAME:
+    # Compare by name (last path component), not full path — the same e5 model
+    # loaded from a different folder (or the HF Hub id) must still count as a
+    # match, so a contributor updating the index reuses existing rows instead of
+    # re-embedding everything.
+    meta_model = meta.get("model", "")
+    if os.path.basename(meta_model.rstrip("/")) != os.path.basename(MODEL_NAME.rstrip("/")):
         print("Model changed since last run — re-embedding everything.")
         return None, 0
     prev_ids = meta.get("chunk_ids", [])

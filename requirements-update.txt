@@ -1,0 +1,7 @@
+# Minimal dependencies to UPDATE the index only (update.py) — no chatbot, no LLM,
+# no .env needed. Install with:
+#   pip install -r requirements-update.txt
+sentence-transformers   # embedding model (multilingual-e5-base)
+torch                   # backend for the embedding model
+numpy                   # the embeddings index
+PyMuPDF                 # PDF text extraction (imported as "fitz")

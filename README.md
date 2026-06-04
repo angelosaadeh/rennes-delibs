@@ -108,10 +108,23 @@ de l'eau, suivie des délibérations sources.
 
 ## Mettre à jour l'index (optionnel)
 
-Pour intégrer de nouvelles délibérations publiées depuis la dernière indexation :
+Pour intégrer de nouvelles délibérations publiées depuis la dernière indexation.
+Pas besoin du chatbot, de LLaMA, de Groq ni de `.env` — juste de quoi extraire et
+embedder :
 
 ```bash
+python3 -m venv ~/myenv
+~/myenv/bin/pip install -r requirements-update.txt
+~/myenv/bin/python3 download_models.py --embed-only   # télécharge seulement l'embedding e5
 ~/myenv/bin/python3 update.py
+```
+
+Puis publiez l'index mis à jour sur GitHub (le Space le récupère au démarrage) :
+
+```bash
+git add data/chunks.json.gz data/embeddings.npy data/embeddings.meta.json
+git commit -m "Mise à jour de l'index"
+git push
 ```
 
 Une seule commande enchaîne tout le pipeline, de façon **incrémentale** (seules
