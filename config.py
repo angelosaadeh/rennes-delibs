@@ -48,6 +48,12 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "").strip()
 # since generation is hosted. Override with GROQ_MODEL (e.g. llama-3.1-8b-instant).
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
 
+# --- Analytics (optional) --------------------------------------------------
+# If set to a dataset repo id (e.g. "angelosaadeh/rennes-delibs-logs"), each
+# interaction is appended to a PRIVATE HF Dataset for analytics. Needs an
+# HF_TOKEN secret with write access. Empty = no logging (the default).
+LOG_DATASET = os.environ.get("LOG_DATASET", "").strip()
+
 # --- Retrieval breadth -----------------------------------------------------
 # Dynamic-k ceiling. Groq's hosted 70B has a 128k context, so it can use many
 # more chunks than the local 8B (capped by LLAMA_N_CTX) — broader, more complete
