@@ -10,7 +10,7 @@ DATASETS = [
         "output_dir": "data/pdfs-ville",
     },
     {
-        "json": "data/deliberations-rennes-metropole-2021.json",
+        "json": "data/deliberations-rennes-metropole-2021-copie.json",
         "output_dir": "data/pdfs-metropole",
     },
 ]

@@ -10,7 +10,7 @@ DATASETS = [
         "output": "data/extracted-ville.json",
     },
     {
-        "json": "data/deliberations-rennes-metropole-2021.json",
+        "json": "data/deliberations-rennes-metropole-2021-copie.json",
         "pdf_dir": "data/pdfs-metropole",
         "output": "data/extracted-metropole.json",
     },
@@ -56,10 +56,21 @@ def process_dataset(json_path, pdf_dir, output_path):
     with open(json_path) as f:
         records = json.load(f)
 
-    results = []
-    missing = 0
+    # Incremental: keep whatever we already extracted and only process
+    # deliberations we haven't seen, appending them. Extraction is cheap-ish but
+    # re-parsing thousands of PDFs on every catalog refresh is pure waste.
+    if os.path.exists(output_path):
+        with open(output_path) as f:
+            results = json.load(f)
+    else:
+        results = []
+    done_ids = {r["delib_id"] for r in results}
+
+    missing = new = 0
 
     for r in records:
+        if r["delib_id"] in done_ids:
+            continue
         pdf_path = os.path.join(pdf_dir, f"{r['delib_id']}.pdf")
         if not os.path.exists(pdf_path):
             missing += 1
@@ -79,11 +90,15 @@ def process_dataset(json_path, pdf_dir, output_path):
             "attendees": parse_attendees(text),
             "text": text,
         })
+        # The Rennes catalog occasionally lists the same delib_id twice; mark it
+        # done immediately so we don't extract (and later chunk) it twice.
+        done_ids.add(r["delib_id"])
+        new += 1
 
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
 
-    print(f"{output_path}: {len(results)} extracted, {missing} PDFs missing")
+    print(f"{output_path}: {new} newly extracted, {len(results)} total, {missing} PDFs missing")
 
 
 if __name__ == "__main__":

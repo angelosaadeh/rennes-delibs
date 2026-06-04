@@ -1,4 +1,5 @@
 import json
+import os
 import re
 
 INPUTS = [
@@ -128,14 +129,29 @@ def make_chunks(record, source):
 
 
 def main():
-    all_chunks = []
+    # Incremental + append-only: load the existing chunks, then add chunks only
+    # for deliberations not already present. Appending at the END is what keeps
+    # embeddings.npy aligned — row i must keep pointing at the same chunk i, so we
+    # must never reorder or insert in the middle.
+    if os.path.exists(OUTPUT):
+        with open(OUTPUT) as f:
+            all_chunks = json.load(f)
+    else:
+        all_chunks = []
+    done_ids = {c["delib_id"] for c in all_chunks}
+
     for inp in INPUTS:
         with open(inp["file"]) as f:
             records = json.load(f)
         n_before = len(all_chunks)
+        added = 0
         for r in records:
+            if r["delib_id"] in done_ids:
+                continue
             all_chunks.extend(make_chunks(r, inp["source"]))
-        print(f"{inp['file']}: {len(records)} deliberations → {len(all_chunks) - n_before} chunks")
+            done_ids.add(r["delib_id"])
+            added += 1
+        print(f"{inp['file']}: {added} new deliberations → {len(all_chunks) - n_before} new chunks")
 
     with open(OUTPUT, "w", encoding="utf-8") as f:
         json.dump(all_chunks, f, ensure_ascii=False, indent=2)
