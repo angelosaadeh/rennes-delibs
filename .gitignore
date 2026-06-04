@@ -4,8 +4,8 @@ data/pdfs_sample/
 data/extracted-ville.json
 data/extracted-metropole.json
 data/chunks.json
-data/embeddings.npy
-data/embeddings.meta.json
+# Prebuilt index is committed so users can skip update.py (chunks.json.gz,
+# embeddings.npy, embeddings.meta.json are intentionally NOT ignored).
 __pycache__/
 *.pyc
 .env

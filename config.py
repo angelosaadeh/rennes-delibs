@@ -24,3 +24,11 @@ LLAMA_MODEL_PATH = os.environ.get(
 
 # LLaMA context window. Big enough for the retrieved chunks + prompt + answer.
 LLAMA_N_CTX = int(os.environ.get("LLAMA_N_CTX", "8192"))
+
+# Where answers are generated:
+#   "local" — the local GGUF above (fully offline, default)
+#   "groq"  — Groq's free hosted Llama 3.1 8B (no big download, needs internet +
+#             a free key from https://console.groq.com and `pip install groq`)
+LLM_BACKEND = os.environ.get("LLM_BACKEND", "local").lower()
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.1-8b-instant")

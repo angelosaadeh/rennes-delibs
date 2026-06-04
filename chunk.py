@@ -1,3 +1,4 @@
+import gzip
 import json
 import os
 import re
@@ -6,7 +7,8 @@ INPUTS = [
     {"file": "data/extracted-ville.json", "source": "ville"},
     {"file": "data/extracted-metropole.json", "source": "metropole"},
 ]
-OUTPUT = "data/chunks.json"
+# Gzipped so the prebuilt index can be committed to the repo (~12 MB vs ~63 MB).
+OUTPUT = "data/chunks.json.gz"
 
 # Target sizes in characters. ~1800 chars ≈ 450 tokens, so several chunks fit
 # comfortably inside LLaMA 3.1 8B's context (n_ctx=4096) at retrieval time.
@@ -134,7 +136,7 @@ def main():
     # embeddings.npy aligned — row i must keep pointing at the same chunk i, so we
     # must never reorder or insert in the middle.
     if os.path.exists(OUTPUT):
-        with open(OUTPUT) as f:
+        with gzip.open(OUTPUT, "rt", encoding="utf-8") as f:
             all_chunks = json.load(f)
     else:
         all_chunks = []
@@ -153,7 +155,7 @@ def main():
             added += 1
         print(f"{inp['file']}: {added} new deliberations → {len(all_chunks) - n_before} new chunks")
 
-    with open(OUTPUT, "w", encoding="utf-8") as f:
+    with gzip.open(OUTPUT, "wt", encoding="utf-8") as f:
         json.dump(all_chunks, f, ensure_ascii=False, indent=2)
 
     n_att = sum(1 for c in all_chunks if c["type"] == "attendees")

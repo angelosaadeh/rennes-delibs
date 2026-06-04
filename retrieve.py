@@ -3,6 +3,7 @@
 Kept separate from the LLaMA answer step so retrieval can be tested on its own
 (it loads in a couple of seconds; the 6.6 GB LLaMA does not).
 """
+import gzip
 import json
 import os
 
@@ -18,7 +19,7 @@ os.environ.setdefault("HF_HUB_OFFLINE", "1")
 # the chunk vectors have to live in the same space for cosine search to mean
 # anything. embeddings.meta.json records which model that was.
 MODEL_NAME = E5_MODEL_PATH
-CHUNKS = "data/chunks.json"
+CHUNKS = "data/chunks.json.gz"
 EMBEDDINGS = "data/embeddings.npy"
 META = "data/embeddings.meta.json"
 
@@ -41,7 +42,7 @@ def pick_device():
 
 class Retriever:
     def __init__(self):
-        with open(CHUNKS) as f:
+        with gzip.open(CHUNKS, "rt", encoding="utf-8") as f:
             self.chunks = json.load(f)
         # Index is fp16 on disk; promote to fp32 for an accurate dot product.
         self.embeddings = np.load(EMBEDDINGS).astype(np.float32)

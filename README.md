@@ -1,74 +1,53 @@
 # rennes-delibs
 
 Poser des questions en langage naturel sur les délibérations de la **Ville de
-Rennes** et de **Rennes Métropole**. Le système télécharge les délibérations
-publiques, les indexe, et répond via un modèle de langage local (LLaMA 3.1 8B) en
-s'appuyant **uniquement** sur les extraits retrouvés (RAG) — pas d'invention.
+Rennes** et de **Rennes Métropole**. Le système retrouve les extraits pertinents
+(RAG) et un modèle Llama 3.1 8B rédige la réponse en français, en s'appuyant
+**uniquement** sur ces extraits — pas d'invention.
 
-Tout tourne **en local** : aucun appel à une API externe, aucune donnée envoyée
-ailleurs.
+L'index des délibérations est **fourni dans le dépôt** : pour simplement poser des
+questions, inutile de re-télécharger ou ré-indexer quoi que ce soit.
 
 ---
 
-## 1. Prérequis
-
-### a) Environnement Python et librairies
+## Démarrage rapide
 
 ```bash
-python3 -m venv ~/myenv          # un environnement virtuel (si vous n'en avez pas)
+python3 -m venv ~/myenv
 ~/myenv/bin/pip install -r requirements.txt
 ```
 
-### b) Les deux modèles
+Choisissez ensuite **où** le modèle génère les réponses :
+
+### Option A — Groq (léger, sans gros téléchargement)
+
+Réponses générées par le Llama 3.1 8B hébergé par Groq (gratuit). Aucun
+téléchargement de 6,6 Go.
 
 ```bash
-~/myenv/bin/python3 download_models.py
-```
-
-Télécharge l'embedding `multilingual-e5-base` (~1 Go) et le modèle de génération
-`Meta-Llama-3.1-8B-Instruct-Q6_K.gguf` (~6,6 Go). Les fichiers déjà présents sont
-ignorés.
-
-Les chemins des modèles sont définis dans **`config.py`** et surchargés par
-variables d'environnement — utile pour les placer ailleurs :
-
-```bash
-export E5_MODEL_PATH=/chemin/vers/multilingual-e5-base
-export LLAMA_MODEL_PATH=/chemin/vers/Meta-Llama-3.1-8B-Instruct-Q6_K.gguf
-```
-
----
-
-## 2. Construire (ou mettre à jour) l'index
-
-```bash
-~/myenv/bin/python3 update.py
-```
-
-Une seule commande enchaîne tout le pipeline, de façon **incrémentale** (seules
-les nouvelles délibérations sont traitées) :
-
-1. `fetch_catalog.py` — récupère le catalogue à jour depuis l'open data de Rennes
-2. `download_pdfs.py` — télécharge les PDFs manquants
-3. `extract_text.py` — extrait le texte et la liste des présents
-4. `chunk.py` — découpe en chunks pour le RAG
-5. `embed.py` — calcule les vecteurs d'embedding (`data/embeddings.npy`)
-
-Relancez `update.py` quand de nouvelles délibérations sont publiées : seuls les
-nouveaux chunks sont embeddés (quelques secondes au lieu de tout recalculer).
-
----
-
-## 3. Poser des questions
-
-### Chatbot (recommandé)
-
-```bash
+~/myenv/bin/pip install groq
+export LLM_BACKEND=groq
+export GROQ_API_KEY=...                 # clé gratuite : https://console.groq.com
+~/myenv/bin/python3 download_models.py  # ne télécharge que l'embedding e5 (~1 Go)
 ~/myenv/bin/python3 app.py
 ```
 
-Ouvrez ensuite **http://localhost:7860**. La réponse s'affiche au fil de l'eau,
-suivie des délibérations sources.
+### Option B — Tout en local (hors-ligne, privé)
+
+Réponses générées par un Llama 3.1 8B local. Rien ne sort de votre machine.
+
+```bash
+~/myenv/bin/pip install llama-cpp-python
+~/myenv/bin/python3 download_models.py  # e5 (~1 Go) + Llama GGUF (~6,6 Go)
+~/myenv/bin/python3 app.py              # LLM_BACKEND vaut "local" par défaut
+```
+
+Dans les deux cas, ouvrez **http://localhost:7860**. La réponse s'affiche au fil
+de l'eau, suivie des délibérations sources.
+
+> L'embedding e5 est requis dans tous les cas : il transforme **votre question**
+> en vecteur pour la recherche. Les chemins des modèles sont dans `config.py`
+> (surchargeables par `E5_MODEL_PATH` / `LLAMA_MODEL_PATH`).
 
 ### En ligne de commande
 
@@ -79,14 +58,37 @@ suivie des délibérations sources.
 
 ---
 
+## Mettre à jour l'index (optionnel)
+
+Pour intégrer de nouvelles délibérations publiées depuis la dernière indexation :
+
+```bash
+~/myenv/bin/python3 update.py
+```
+
+Une seule commande enchaîne tout le pipeline, de façon **incrémentale** (seules
+les nouvelles délibérations sont traitées) :
+
+1. `fetch_catalog.py` — catalogue à jour depuis l'open data de Rennes
+2. `download_pdfs.py` — télécharge les PDFs manquants
+3. `extract_text.py` — extrait le texte et la liste des présents
+4. `chunk.py` — découpe en chunks (`data/chunks.json.gz`)
+5. `embed.py` — calcule les embeddings (`data/embeddings.npy`)
+
+Seuls les nouveaux chunks sont embeddés (quelques secondes), pas tout le corpus.
+
+---
+
 ## Comment ça marche
 
 - **Récupération** (`retrieve.py`) : la question est embeddée avec **le même**
   modèle e5 que les délibérations, puis comparée par similarité cosinus. Le
   nombre d'extraits retenus est **dynamique** — il s'adapte au nombre de
   correspondances pertinentes (coupe au plus grand décrochage de score).
-- **Génération** (`ask.py`) : les extraits retenus sont fournis à LLaMA, à qui
-  l'on demande de répondre uniquement à partir d'eux, en français, avec sources.
+- **Génération** (`ask.py`) : les extraits sont fournis au LLM (local ou Groq),
+  à qui l'on demande de répondre uniquement à partir d'eux, en français, avec
+  les sources.
 
-Tous les fichiers dérivés (PDFs, JSON extraits, index) sont dans `data/` et
+L'index est versionné (`data/chunks.json.gz`, `data/embeddings.npy`) ; les
+fichiers intermédiaires (PDFs, JSON extraits) restent dans `data/` et sont
 ignorés par git.

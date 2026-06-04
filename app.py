@@ -8,19 +8,20 @@ answer, followed by the source deliberations.
 """
 import gradio as gr
 
-from ask import build_llm, build_messages, format_sources, stream_answer
+from ask import build_messages, format_sources, load_backend, stream_answer
+from config import LLM_BACKEND
 from retrieve import Retriever
 
-print("Chargement de l'index et du modèle LLaMA (~10-20 s)...")
+print(f"Chargement de l'index et du modèle (backend: {LLM_BACKEND})...")
 retriever = Retriever()
-llm = build_llm()
+backend = load_backend()
 
 
 def respond(message, history):
     results = retriever.search(message)  # dynamic k
     messages = build_messages(message, results)
     answer = ""
-    for delta in stream_answer(llm, messages):
+    for delta in stream_answer(backend, messages):
         answer += delta
         yield answer
     yield answer + "\n\n---\n**Sources :**\n" + format_sources(results)

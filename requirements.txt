@@ -1,8 +1,11 @@
-# Core pipeline + RAG app dependencies.
-# Install with:  pip install -r requirements.txt
-sentence-transformers   # embedding model (multilingual-e5-base)
+# Core dependencies (always needed). Install with:
+#   pip install -r requirements.txt
+sentence-transformers   # embedding model (multilingual-e5-base), to vectorize queries
 torch                   # backend for the embedding model (MPS/CUDA/CPU)
 numpy                   # the embeddings index + cosine search
-PyMuPDF                 # PDF text extraction (imported as "fitz")
-llama-cpp-python        # local LLaMA 3.1 8B GGUF inference
 gradio                  # the chatbot web UI (app.py)
+PyMuPDF                 # PDF text extraction (imported as "fitz") — only for update.py
+
+# Generation backend — install ONE, matching config.LLM_BACKEND:
+#   local : pip install llama-cpp-python   (local LLaMA 3.1 8B GGUF, offline)
+#   groq  : pip install groq               (Groq's free hosted Llama 3.1 8B)

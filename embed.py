@@ -1,3 +1,4 @@
+import gzip
 import json
 import os
 
@@ -11,7 +12,7 @@ from config import E5_MODEL_PATH
 # blocked on this machine and would just hang the run). Caller can override.
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 
-CHUNKS = "data/chunks.json"
+CHUNKS = "data/chunks.json.gz"
 OUTPUT = "data/embeddings.npy"
 # Sidecar that records, in order, which chunk_id each embedding row holds (plus
 # the model that produced them). It lets re-runs embed ONLY the new chunks and
@@ -72,7 +73,7 @@ def load_existing(current_ids):
 
 
 def main():
-    with open(CHUNKS) as f:
+    with gzip.open(CHUNKS, "rt", encoding="utf-8") as f:
         chunks = json.load(f)
     current_ids = [c["chunk_id"] for c in chunks]
 

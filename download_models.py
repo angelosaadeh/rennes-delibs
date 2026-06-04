@@ -9,7 +9,7 @@ The LLaMA file is ~6.6 GB, so this can take a while on the first run.
 import os
 import urllib.request
 
-from config import E5_MODEL_PATH, LLAMA_MODEL_PATH
+from config import E5_MODEL_PATH, LLAMA_MODEL_PATH, LLM_BACKEND
 
 E5_BASE = "https://huggingface.co/intfloat/multilingual-e5-base/resolve/main"
 # Everything sentence-transformers needs to load the model from a local folder.
@@ -44,11 +44,17 @@ def download(url, dest):
 
 
 def main():
+    # e5 is always needed: it embeds the user's question at query time.
     print(f"e5 embedding model -> {E5_MODEL_PATH}")
     for f in E5_FILES:
         download(f"{E5_BASE}/{f}", os.path.join(E5_MODEL_PATH, *f.split("/")))
-    print(f"LLaMA GGUF -> {LLAMA_MODEL_PATH}")
-    download(LLAMA_URL, LLAMA_MODEL_PATH)
+
+    # The big LLaMA GGUF is only needed for the local backend; Groq runs it hosted.
+    if LLM_BACKEND == "local":
+        print(f"LLaMA GGUF -> {LLAMA_MODEL_PATH}")
+        download(LLAMA_URL, LLAMA_MODEL_PATH)
+    else:
+        print(f"LLM_BACKEND={LLM_BACKEND}: skipping the LLaMA download (hosted).")
     print("Done.")
 
 
