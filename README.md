@@ -2,7 +2,7 @@
 
 Poser des questions en langage naturel sur les délibérations de la **Ville de
 Rennes** et de **Rennes Métropole**. Le système retrouve les extraits pertinents
-(RAG) et un modèle Llama 3.1 8B rédige la réponse en français, en s'appuyant
+(RAG) et un modèle Llama 3 rédige la réponse en français, en s'appuyant
 **uniquement** sur ces extraits — pas d'invention.
 
 L'index des délibérations est **fourni dans le dépôt** : pour simplement poser des
@@ -10,25 +10,38 @@ questions, inutile de re-télécharger ou ré-indexer quoi que ce soit.
 
 ---
 
-## Démarrage rapide
+## Installation
 
 ```bash
 python3 -m venv ~/myenv
 ~/myenv/bin/pip install -r requirements.txt
+cp .env.example .env          # votre configuration (chemins, backend, clé)
 ```
 
-Choisissez ensuite **où** le modèle génère les réponses :
+Vous configurez tout dans `.env`, puis vous lancez simplement `python app.py`.
 
-### Option A — Groq (léger, sans gros téléchargement)
+Choisissez **où** le modèle génère les réponses :
 
-Réponses générées par le Llama 3.1 8B hébergé par Groq (gratuit). Aucun
-téléchargement de 6,6 Go.
+### Option A — Groq (léger, et meilleur modèle)
+
+Réponses générées par **Llama 3.3 70B** hébergé gratuitement par Groq — bien plus
+puissant que le 8B local, et **aucun téléchargement de 6,6 Go**.
 
 ```bash
 ~/myenv/bin/pip install groq
-export LLM_BACKEND=groq
-export GROQ_API_KEY=...                 # clé gratuite : https://console.groq.com
-~/myenv/bin/python3 download_models.py  # ne télécharge que l'embedding e5 (~1 Go)
+```
+
+Dans `.env` :
+
+```ini
+LLM_BACKEND=groq
+GROQ_API_KEY=gsk_...          # clé gratuite : https://console.groq.com
+```
+
+Puis :
+
+```bash
+~/myenv/bin/python3 download_models.py   # ne télécharge que l'embedding e5 (~1 Go)
 ~/myenv/bin/python3 app.py
 ```
 
@@ -38,16 +51,22 @@ Réponses générées par un Llama 3.1 8B local. Rien ne sort de votre machine.
 
 ```bash
 ~/myenv/bin/pip install llama-cpp-python
-~/myenv/bin/python3 download_models.py  # e5 (~1 Go) + Llama GGUF (~6,6 Go)
-~/myenv/bin/python3 app.py              # LLM_BACKEND vaut "local" par défaut
+```
+
+Dans `.env`, laissez `LLM_BACKEND=local`, puis :
+
+```bash
+~/myenv/bin/python3 download_models.py   # e5 (~1 Go) + Llama GGUF (~6,6 Go)
+~/myenv/bin/python3 app.py
 ```
 
 Dans les deux cas, ouvrez **http://localhost:7860**. La réponse s'affiche au fil
 de l'eau, suivie des délibérations sources.
 
 > L'embedding e5 est requis dans tous les cas : il transforme **votre question**
-> en vecteur pour la recherche. Les chemins des modèles sont dans `config.py`
-> (surchargeables par `E5_MODEL_PATH` / `LLAMA_MODEL_PATH`).
+> en vecteur pour la recherche. Par défaut les modèles sont cherchés dans
+> `./models/` ; pointez `E5_MODEL_PATH` / `LLAMA_MODEL_PATH` (dans `.env`) vers
+> des fichiers existants pour éviter de retélécharger.
 
 ### En ligne de commande
 

@@ -6,7 +6,9 @@ data/extracted-metropole.json
 data/chunks.json
 # Prebuilt index is committed so users can skip update.py (chunks.json.gz,
 # embeddings.npy, embeddings.meta.json are intentionally NOT ignored).
+models/
 __pycache__/
 *.pyc
 .env
+!.env.example
 .DS_Store

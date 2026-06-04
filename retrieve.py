@@ -32,6 +32,11 @@ MIN_K = 3
 MAX_K = 8
 
 
+def _model_name(path):
+    """Last path component, so /a/b/e5, models/e5 and org/e5 all compare equal."""
+    return os.path.basename(path.rstrip("/"))
+
+
 def pick_device():
     if torch.backends.mps.is_available():
         return "mps"
@@ -52,10 +57,13 @@ class Retriever:
                 f"{len(self.embeddings)} embeddings. Re-run embed.py."
             )
         # Guard against querying with a different model than built the index.
+        # Compare by name (last path component) rather than full path, so the
+        # same model loaded from a different location — or from the HF Hub id
+        # "intfloat/multilingual-e5-base" — still matches.
         if os.path.exists(META):
             with open(META) as f:
                 model = json.load(f).get("model")
-            if model and model != MODEL_NAME:
+            if model and _model_name(model) != _model_name(MODEL_NAME):
                 raise SystemExit(
                     f"Index was built with {model}, but retrieve uses {MODEL_NAME}."
                 )
