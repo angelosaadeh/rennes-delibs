@@ -22,6 +22,21 @@ def extract_text(pdf_path):
     return "\n".join(page.get_text() for page in doc).strip()
 
 
+# Normal French text is almost entirely ASCII plus a few accented letters. Some
+# PDFs embed subset fonts with a broken ToUnicode map: the glyphs render fine in
+# a viewer but the extracted text is scrambled (mojibake). Such text has a high
+# share of unusual characters — detect it and skip the PDF rather than poison the
+# index with gibberish that an LLM may echo back verbatim.
+_NORMAL = set(" éèàçùâêîôûëïüœÉÈÀÇ")
+
+
+def is_garbled(text, threshold=0.7):
+    if not text:
+        return False
+    ok = sum(1 for ch in text if 0x20 <= ord(ch) <= 0x7E or ch in _NORMAL)
+    return ok / len(text) < threshold
+
+
 # Phrases that mark the end of the attendee block / start of the decision body.
 # Needed because the two formats differ: the Bureau/Ville format ends the block
 # with "Le quorum…", while the full Conseil métropolitain has no quorum line and
@@ -66,7 +81,7 @@ def process_dataset(json_path, pdf_dir, output_path):
         results = []
     done_ids = {r["delib_id"] for r in results}
 
-    missing = new = 0
+    missing = new = garbled = 0
 
     for r in records:
         if r["delib_id"] in done_ids:
@@ -80,6 +95,11 @@ def process_dataset(json_path, pdf_dir, output_path):
             text = extract_text(pdf_path)
         except Exception as e:
             print(f"  FAIL {r['delib_id']}: {e}")
+            continue
+
+        if is_garbled(text):
+            garbled += 1
+            print(f"  GARBLED (skipped) {r['delib_id']}: broken-font PDF, text unreadable")
             continue
 
         results.append({
@@ -98,7 +118,10 @@ def process_dataset(json_path, pdf_dir, output_path):
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
 
-    print(f"{output_path}: {new} newly extracted, {len(results)} total, {missing} PDFs missing")
+    print(
+        f"{output_path}: {new} newly extracted, {len(results)} total, "
+        f"{missing} PDFs missing, {garbled} garbled (skipped)"
+    )
 
 
 if __name__ == "__main__":
