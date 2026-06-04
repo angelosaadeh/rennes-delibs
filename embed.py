@@ -5,6 +5,8 @@ import numpy as np
 import torch
 from sentence_transformers import SentenceTransformer
 
+from config import E5_MODEL_PATH
+
 # The model lives on disk; never reach out to HuggingFace (which is sometimes
 # blocked on this machine and would just hang the run). Caller can override.
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
@@ -18,7 +20,7 @@ META = "data/embeddings.meta.json"
 
 # The embeddings are locked to this model: the app must load the SAME model to
 # embed incoming questions, or nearest-neighbour search compares unrelated spaces.
-MODEL_NAME = "/Users/angelo/Documents/ENS/models/multilingual-e5-base"
+MODEL_NAME = E5_MODEL_PATH
 BATCH_SIZE = 64
 
 

@@ -1,0 +1,8 @@
+# Core pipeline + RAG app dependencies.
+# Install with:  pip install -r requirements.txt
+sentence-transformers   # embedding model (multilingual-e5-base)
+torch                   # backend for the embedding model (MPS/CUDA/CPU)
+numpy                   # the embeddings index + cosine search
+PyMuPDF                 # PDF text extraction (imported as "fitz")
+llama-cpp-python        # local LLaMA 3.1 8B GGUF inference
+gradio                  # the chatbot web UI (app.py)
