@@ -6,6 +6,7 @@ Kept separate from the LLaMA answer step so retrieval can be tested on its own
 import gzip
 import json
 import os
+import urllib.request
 
 import numpy as np
 import torch
@@ -13,7 +14,11 @@ from sentence_transformers import SentenceTransformer
 
 from config import E5_MODEL_PATH, RETRIEVAL_MAX_K, RETRIEVAL_MIN_K
 
-os.environ.setdefault("HF_HUB_OFFLINE", "1")
+# Stay offline only when the embedding model is already on disk. On a hosted
+# Space, E5_MODEL_PATH is a Hub id (e.g. "intfloat/multilingual-e5-base") that
+# must be downloaded, so forcing offline there would break startup.
+if os.path.isdir(E5_MODEL_PATH):
+    os.environ.setdefault("HF_HUB_OFFLINE", "1")
 
 # MUST be the same model that built data/embeddings.npy — the question vector and
 # the chunk vectors have to live in the same space for cosine search to mean
@@ -22,6 +27,22 @@ MODEL_NAME = E5_MODEL_PATH
 CHUNKS = "data/chunks.json.gz"
 EMBEDDINGS = "data/embeddings.npy"
 META = "data/embeddings.meta.json"
+
+# If the index isn't present locally (e.g. a fresh hosted Space), fetch it from
+# the GitHub repo instead of committing 44 MB of binaries to the Space.
+INDEX_BASE_URL = os.environ.get(
+    "INDEX_BASE_URL",
+    "https://raw.githubusercontent.com/angelosaadeh/rennes-delibs/main/data",
+)
+
+
+def _ensure_index(path):
+    if os.path.exists(path):
+        return
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    url = f"{INDEX_BASE_URL}/{os.path.basename(path)}"
+    print(f"Téléchargement de l'index : {url}")
+    urllib.request.urlretrieve(url, path)
 
 # Dynamic selection: instead of a fixed top-k, look at the top MAX_K candidates
 # and cut where the scores drop off the most (an "elbow"), no earlier than MIN_K.
@@ -48,6 +69,8 @@ def pick_device():
 
 class Retriever:
     def __init__(self):
+        for path in (CHUNKS, EMBEDDINGS, META):
+            _ensure_index(path)
         with gzip.open(CHUNKS, "rt", encoding="utf-8") as f:
             self.chunks = json.load(f)
         # Index is fp16 on disk; promote to fp32 for an accurate dot product.
