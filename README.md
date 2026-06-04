@@ -31,11 +31,27 @@ puissant que le 8B local, et **aucun téléchargement de 6,6 Go**.
 ~/myenv/bin/pip install groq
 ```
 
-Dans `.env` :
+#### Obtenir une clé Groq (gratuit, ~2 min)
+
+1. Allez sur **https://console.groq.com** et créez un compte (bouton *Sign up* —
+   vous pouvez utiliser votre compte Google ou GitHub, ou une adresse e-mail).
+2. Une fois connecté, dans le menu de gauche, cliquez sur **API Keys**.
+3. Cliquez sur **Create API Key**, donnez-lui un nom (par ex. `rennes-delibs`),
+   puis validez.
+4. **Copiez la clé immédiatement** (elle commence par `gsk_...`). Elle ne s'affiche
+   **qu'une seule fois** — si vous la perdez, recréez-en une.
+
+> ⚠️ Gardez cette clé secrète : ne la partagez pas et ne la mettez pas sur
+> internet. Si elle est exposée, supprimez-la dans la console et recréez-en une.
+> Aucun frais : l'usage gratuit suffit largement pour cet outil.
+
+#### La renseigner
+
+Dans `.env`, collez votre clé :
 
 ```ini
 LLM_BACKEND=groq
-GROQ_API_KEY=gsk_...          # clé gratuite : https://console.groq.com
+GROQ_API_KEY=gsk_votre_cle_ici
 ```
 
 Puis :
