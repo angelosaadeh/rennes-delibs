@@ -12,3 +12,7 @@ __pycache__/
 .env
 !.env.example
 .DS_Store
+
+
+# Project report (kept local, not published)
+report/
