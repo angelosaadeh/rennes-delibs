@@ -38,15 +38,21 @@ LLAMA_N_CTX = int(os.environ.get("LLAMA_N_CTX", "8192"))
 
 # --- Generation backend ----------------------------------------------------
 #   "local" — the local GGUF above (fully offline, default)
-#   "groq"  — Groq's free hosted Llama 3.1 8B (no big download; needs a free key
+#   "groq"  — Groq's hosted GPT-OSS 120B (no big download; needs a free key
 #             from https://console.groq.com and `pip install groq`)
 # .strip() throughout: HF Space secrets/variables often keep a trailing newline,
 # and a newline in the API key produces an "illegal header value" on every call.
 LLM_BACKEND = os.environ.get("LLM_BACKEND", "local").strip().lower()
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "").strip()
-# Llama 3.3 70B is free on Groq and far stronger than the local 8B — worth using
-# since generation is hosted. Override with GROQ_MODEL (e.g. llama-3.1-8b-instant).
-GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
+# Groq retired its Llama models for free/developer keys on 2026-08-16
+# (llama-3.3-70b-versatile -> openai/gpt-oss-120b, llama-3.1-8b-instant ->
+# openai/gpt-oss-20b). GPT-OSS is a reasoning model, so GROQ_REASONING_EFFORT
+# (low|medium|high) trades answer quality against tokens/latency.
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b").strip()
+GROQ_REASONING_EFFORT = os.environ.get("GROQ_REASONING_EFFORT", "low").strip().lower()
+# Completion budget (hidden reasoning + visible answer). Counts toward the TPM
+# limit, so keep it modest on the free tier; raise it on a paid key.
+GROQ_MAX_TOKENS = int(os.environ.get("GROQ_MAX_TOKENS", "2048"))
 
 # --- Analytics (optional) --------------------------------------------------
 # If set to a dataset repo id (e.g. "angelosaadeh/rennes-delibs-logs"), each
@@ -55,10 +61,11 @@ GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile").strip()
 LOG_DATASET = os.environ.get("LOG_DATASET", "").strip()
 
 # --- Retrieval breadth -----------------------------------------------------
-# Dynamic-k ceiling. Groq's hosted 70B has a 128k context, so it can use many
-# more chunks than the local 8B (capped by LLAMA_N_CTX) — broader, more complete
-# answers. Override with RETRIEVAL_MAX_K.
-RETRIEVAL_MIN_K = int(os.environ.get("RETRIEVAL_MIN_K", "3"))
+# Number of chunks returned per question (top-k, incl. sibling expansion).
+# The binding limit on Groq is NOT the 128k context but the FREE tier's 8k
+# tokens/minute for gpt-oss-120b: prompt + max_tokens of a single request must
+# fit under it. At ~500 tokens/chunk, 8 chunks (~4.5k) + a 2k answer budget fits.
+# On a paid (developer) key — 250k TPM — raise this, e.g. RETRIEVAL_MAX_K=100.
 RETRIEVAL_MAX_K = int(
-    os.environ.get("RETRIEVAL_MAX_K", "20" if LLM_BACKEND == "groq" else "8")
+    os.environ.get("RETRIEVAL_MAX_K", "8")
 )

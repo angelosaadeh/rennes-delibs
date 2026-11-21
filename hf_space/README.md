@@ -12,6 +12,6 @@ pinned: false
 
 Posez des questions en langage naturel sur les délibérations de la **Ville de
 Rennes** et de **Rennes Métropole**. Les réponses s'appuient uniquement sur les
-délibérations retrouvées (RAG), générées par **Llama 3.3 70B** (Groq).
+délibérations retrouvées (RAG), générées par **GPT-OSS 120B** (Groq).
 
 Code source : https://github.com/angelosaadeh/rennes-delibs

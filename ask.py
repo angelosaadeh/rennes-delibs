@@ -5,7 +5,7 @@
 
 Generation goes through a pluggable backend (config.LLM_BACKEND):
   - "local": the local LLaMA GGUF, fully offline (default)
-  - "groq" : Groq's free hosted Llama 3.1 8B (no 6.6 GB download)
+  - "groq" : Groq's hosted GPT-OSS 120B (no 6.6 GB download)
 Either way the model only ever sees the retrieved extracts, so answers stay
 grounded in the actual deliberations. app.py reuses the helpers below.
 """
@@ -13,7 +13,9 @@ import sys
 
 from config import (
     GROQ_API_KEY,
+    GROQ_MAX_TOKENS,
     GROQ_MODEL,
+    GROQ_REASONING_EFFORT,
     LLAMA_MODEL_PATH,
     LLAMA_N_CTX,
     LLM_BACKEND,
@@ -53,7 +55,7 @@ class LocalBackend:
 
 
 class GroqBackend:
-    """Groq's hosted Llama 3.1 8B (free tier, OpenAI-compatible)."""
+    """Groq's hosted GPT-OSS reasoning model (OpenAI-compatible)."""
 
     def __init__(self):
         from groq import Groq  # imported lazily: only needed for this backend
@@ -66,13 +68,33 @@ class GroqBackend:
         self.client = Groq(api_key=GROQ_API_KEY)
 
     def stream(self, messages, max_tokens, temperature):
-        stream = self.client.chat.completions.create(
-            model=GROQ_MODEL,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            stream=True,
-        )
+        import groq
+
+        try:
+            stream = self.client.chat.completions.create(
+                model=GROQ_MODEL,
+                messages=messages,
+                temperature=temperature,
+                # GPT-OSS spends hidden reasoning tokens out of this same budget,
+                # so it needs more headroom than the visible answer alone.
+                max_tokens=max(max_tokens, GROQ_MAX_TOKENS),
+                # Don't send the chain of thought back (only the answer is
+                # shown), and keep it short to save tokens.
+                reasoning_effort=GROQ_REASONING_EFFORT,
+                include_reasoning=False,
+                stream=True,
+            )
+        except groq.APIStatusError as e:
+            # 429 = rate limit hit; 413 = this single request exceeds the
+            # per-minute token limit (lower RETRIEVAL_MAX_K / GROQ_MAX_TOKENS).
+            if e.status_code in (413, 429):
+                print(f"Groq {e.status_code}: {e}", file=sys.stderr)
+                yield (
+                    "⚠️ Le service est momentanément saturé (limite de requêtes "
+                    "Groq atteinte). Réessayez dans une minute."
+                )
+                return
+            raise
         for chunk in stream:
             delta = chunk.choices[0].delta.content
             if delta:

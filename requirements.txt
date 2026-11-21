@@ -8,4 +8,4 @@ PyMuPDF                 # PDF text extraction (imported as "fitz") — only for 
 
 # Generation backend — install ONE, matching config.LLM_BACKEND:
 #   local : pip install llama-cpp-python   (local LLaMA 3.1 8B GGUF, offline)
-#   groq  : pip install groq               (Groq's free hosted Llama 3.1 8B)
+#   groq  : pip install groq               (Groq's hosted GPT-OSS 120B)

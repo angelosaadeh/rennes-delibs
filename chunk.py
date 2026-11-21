@@ -11,7 +11,7 @@ INPUTS = [
 OUTPUT = "data/chunks.json.gz"
 
 # Target sizes in characters. ~1800 chars ≈ 450 tokens, so several chunks fit
-# comfortably inside LLaMA 3.1 8B's context (n_ctx=4096) at retrieval time.
+# comfortably inside the model's context window at retrieval time.
 CHUNK_SIZE = 1800
 CHUNK_OVERLAP = 200
 

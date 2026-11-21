@@ -6,13 +6,14 @@ Kept separate from the LLaMA answer step so retrieval can be tested on its own
 import gzip
 import json
 import os
+import re
 import urllib.request
 
 import numpy as np
 import torch
 from sentence_transformers import SentenceTransformer
 
-from config import E5_MODEL_PATH, RETRIEVAL_MAX_K, RETRIEVAL_MIN_K
+from config import E5_MODEL_PATH, RETRIEVAL_MAX_K
 
 # Stay offline only when the embedding model is already on disk. On a hosted
 # Space, E5_MODEL_PATH is a Hub id (e.g. "intfloat/multilingual-e5-base") that
@@ -44,14 +45,28 @@ def _ensure_index(path):
     print(f"Téléchargement de l'index : {url}")
     urllib.request.urlretrieve(url, path)
 
-# Dynamic selection: instead of a fixed top-k, look at the top MAX_K candidates
-# and cut where the scores drop off the most (an "elbow"), no earlier than MIN_K.
-# A broad question whose relevance fades slowly keeps more chunks; a narrow one
-# with a sharp drop after the first few keeps fewer. e5 cosine scores sit in a
-# compressed band, so a relative gap adapts far better than an absolute cutoff.
-# The ceiling is backend-aware (config): higher for Groq's large context window.
-MIN_K = RETRIEVAL_MIN_K
+# Plain top-k: return the MAX_K highest-scoring chunks. An earlier "elbow" cut
+# (stop at the biggest score gap) fired far too early here — e5 cosine scores sit
+# in a compressed band, so the largest gap lands in the first few ranks and only a
+# handful of chunks came back regardless of MAX_K. Top-k is predictable and
+# actually uses the ceiling, which is backend-aware (config): higher for Groq.
 MAX_K = RETRIEVAL_MAX_K
+
+# Attendee chunks carry the same topical [objet | date] header as the decision
+# body, so for a topical query ("subventions santé") a name roster scores as high
+# as the decision that actually answers it — and, being short and uniform, a whole
+# block of rosters can monopolise the top ranks and crowd the decisions out
+# entirely. We therefore drop attendee chunks from retrieval UNLESS the question is
+# itself about attendance, detected by these words.
+ATTENDANCE_RE = re.compile(
+    r"\b(pr[ée]sent|absent|procuration|quorum|si[ée]g|assist|excus|"
+    r"qui (?:[ée]tait|sont|a particip)|vot[ae])",
+    re.IGNORECASE,
+)
+
+
+def _is_attendance_query(question):
+    return bool(ATTENDANCE_RE.search(question))
 
 
 def _model_name(path):
@@ -93,12 +108,34 @@ class Retriever:
                 )
         self.model = SentenceTransformer(MODEL_NAME, device=pick_device())
 
-    def search(self, question, k=None, min_k=MIN_K, max_k=MAX_K):
-        """Return [(score, chunk)] for the matches.
+        # delib_id -> indices of its decision chunks, kept in document order so a
+        # retrieved chunk can pull in the rest of its deliberation (see search()).
+        self.decision_siblings = {}
+        for i, c in enumerate(self.chunks):
+            if c["type"] == "decision":
+                self.decision_siblings.setdefault(c["delib_id"], []).append(i)
 
-        By default the count is *dynamic*: among the top `max_k` candidates, cut
-        at the biggest score drop (no earlier than `min_k`). Pass an explicit `k`
-        to force a fixed number instead.
+    def search(self, question, k=None, max_k=MAX_K, expand_radius=3,
+               include_attendees=None):
+        """Return [(score, chunk)] for the best matches, highest cosine first.
+
+        `max_k` (or an explicit `k`) is a budget on the number of chunks RETURNED,
+        not on the number of distinct matches scored. Two corrections to plain
+        top-k are applied so the budget is spent on text that can actually answer
+        the question:
+
+        * Attendee chunks are excluded unless the question is about attendance
+          (`include_attendees`, auto-detected when None). They share the decision's
+          topical header and would otherwise dominate the ranking with name lists.
+        * Sibling expansion (`expand_radius`): when a decision chunk matches, its
+          neighbouring chunks from the SAME deliberation (the `expand_radius`
+          chunks on either side, in document order) are pulled in with it. A
+          deliberation's amounts/beneficiaries often sit a chunk or two away from
+          the chunk carrying the topical header, in a table that — being mostly
+          names and numbers — scores far below it; expansion brings it along. The
+          window is bounded, so a single very long deliberation (some budget
+          documents run to hundreds of chunks) cannot swallow the whole budget.
+          Set `expand_radius=0` to disable and recover plain top-k.
         """
         # e5 expects "query: " on questions (documents used "passage: ").
         q = self.model.encode(
@@ -110,19 +147,38 @@ class Retriever:
         scores = self.embeddings @ q
         order = np.argsort(-scores)  # 29k items — full sort is cheap and exact
 
-        if k is not None:
-            selected = order[: min(k, len(order))]
-        else:
-            cand = order[: min(max_k, len(order))]
-            cs = scores[cand]
-            if len(cand) > min_k:
-                gaps = cs[:-1] - cs[1:]  # gaps[j] = score drop right after rank j
-                # Largest drop at rank >= min_k-1 → keep everything up to it.
-                cut = (min_k - 1) + int(np.argmax(gaps[min_k - 1:]))
-                selected = cand[: cut + 1]
+        if include_attendees is None:
+            include_attendees = _is_attendance_query(question)
+        budget = k if k is not None else max_k
+        # An attendance question wants the compact rosters, not deliberation
+        # bodies — expanding decision windows would spend the budget before the
+        # roster chunks (which rank a little lower) are reached.
+        if include_attendees:
+            expand_radius = 0
+
+        results, picked = [], set()
+        for i in order:
+            if len(picked) >= budget:
+                break
+            c = self.chunks[i]
+            if i in picked or (c["type"] == "attendees" and not include_attendees):
+                continue
+            # Window of neighbours from the same deliberation, in document order.
+            if c["type"] == "decision" and expand_radius:
+                sib = self.decision_siblings[c["delib_id"]]
+                pos = sib.index(i)
+                group = sib[max(0, pos - expand_radius): pos + expand_radius + 1]
             else:
-                selected = cand
-        return [(float(scores[i]), self.chunks[i]) for i in selected]
+                group = [i]
+            # Add what fits; never overflow the budget (truncate a window rather
+            # than let one deliberation monopolise the context).
+            for j in group:
+                if len(picked) >= budget:
+                    break
+                if j not in picked:
+                    picked.add(j)
+                    results.append((float(scores[i]), self.chunks[j]))
+        return results
 
 
 if __name__ == "__main__":

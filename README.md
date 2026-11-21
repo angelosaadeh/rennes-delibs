@@ -2,7 +2,8 @@
 
 Poser des questions en langage naturel sur les délibérations de la **Ville de
 Rennes** et de **Rennes Métropole**. Le système retrouve les extraits pertinents
-(RAG) et un modèle Llama 3 rédige la réponse en français, en s'appuyant
+(RAG) et un modèle de langage (GPT-OSS 120B via Groq, ou Llama 3.1 8B en local)
+rédige la réponse en français, en s'appuyant
 **uniquement** sur ces extraits — pas d'invention.
 
 L'index des délibérations est **fourni dans le dépôt** : pour simplement poser des
@@ -36,7 +37,7 @@ Choisissez **où** le modèle génère les réponses :
 
 ### Option A — Groq (léger, et meilleur modèle)
 
-Réponses générées par **Llama 3.3 70B** hébergé gratuitement par Groq — bien plus
+Réponses générées par **GPT-OSS 120B** hébergé gratuitement par Groq — bien plus
 puissant que le 8B local, et **aucun téléchargement de 6,6 Go**.
 
 ```bash
@@ -55,7 +56,11 @@ puissant que le 8B local, et **aucun téléchargement de 6,6 Go**.
 
 > ⚠️ Gardez cette clé secrète : ne la partagez pas et ne la mettez pas sur
 > internet. Si elle est exposée, supprimez-la dans la console et recréez-en une.
-> Aucun frais : l'usage gratuit suffit largement pour cet outil.
+> Aucun frais : l'offre gratuite suffit pour un usage personnel. Elle limite
+> toutefois chaque question à quelques extraits (8 par défaut) et à environ
+> **une question par minute** (~25 par jour) ; au-delà, l'outil affiche « service
+> momentanément saturé ». Avec une offre payante Groq, augmentez
+> `RETRIEVAL_MAX_K` (ex. 100) et `GROQ_MAX_TOKENS` (ex. 4096) dans `.env`.
 
 #### La renseigner
 
@@ -143,9 +148,10 @@ Seuls les nouveaux chunks sont embeddés (quelques secondes), pas tout le corpus
 ## Comment ça marche
 
 - **Récupération** (`retrieve.py`) : la question est embeddée avec **le même**
-  modèle e5 que les délibérations, puis comparée par similarité cosinus. Le
-  nombre d'extraits retenus est **dynamique** — il s'adapte au nombre de
-  correspondances pertinentes (coupe au plus grand décrochage de score).
+  modèle e5 que les délibérations, puis comparée par similarité cosinus. Les
+  `RETRIEVAL_MAX_K` meilleurs extraits sont retenus ; les listes de présence
+  sont écartées (sauf question sur les présences) et les extraits voisins d'une
+  même délibération sont ajoutés, pour ne pas perdre les montants et tableaux.
 - **Génération** (`ask.py`) : les extraits sont fournis au LLM (local ou Groq),
   à qui l'on demande de répondre uniquement à partir d'eux, en français, avec
   les sources.
